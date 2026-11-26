@@ -3,14 +3,14 @@
 TurtleBot3 시뮬레이터를 **관찰하고 만져보며** ROS2 구조를 파악하는 계획입니다.
 코드를 짜기 전에, 이미 돌아가는 시스템을 읽는 것부터 시작합니다.
 
-> 실행 방법은 [README](../README.md), 배운 점은 [learning-log](learning-log.md)에 기록합니다.
+> 실행 방법은 [README](../README.md), 배운 점은 날짜별 폴더(`docs/YYYY-MM-DD/`)에 기록합니다.
 > 아래 명령은 모두 컨테이너 안에서 실행합니다.
 > (시뮬레이터가 켜져 있어야 합니다)
 
 ## 진행 방식
 
 - 한 번에 한 질문씩: "이 토픽은 누가 만들고 누가 쓰는가?"
-- 단계마다 체크박스를 채우고, 배운 점은 [learning-log](learning-log.md)에 적습니다.
+- 단계마다 체크박스를 채우고, 배운 점은 날짜별 폴더(`docs/YYYY-MM-DD/`)에 적습니다.
 - 막히면 `ros2 <명령> --help`
 - 병행 자료: ROS2 Humble 공식 문서 *Beginner: CLI tools* (turtlesim 대신 터틀봇으로 바꿔서 실습)
 
@@ -73,9 +73,9 @@ ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.1}}"
 **실습**
 ```bash
 ros2 service list -t
-ros2 service type /pause_physics             # Gazebo 서비스 예시
+ros2 service type /pause_physics             # Gazebo 서비스 예시 → std_srvs/srv/Empty
 ros2 param list
-ros2 param get /turtlebot3_diff_drive use_sim_time
+ros2 param get /turtlebot3_diff_drive use_sim_time   # → Boolean value is: True
 ros2 action list                             # 지금은 비어 있어도 정상 (Nav2에서 사용)
 ```
 
@@ -133,19 +133,58 @@ rviz2                                        # RobotModel, LaserScan, TF 추가
 - 월드 변경: `turtlebot3_house`
 - 로봇 변경: `TURTLEBOT3_MODEL=burger` / `waffle_pi`
 - `ROS_DOMAIN_ID`를 바꿔 통신이 분리되는 걸 확인 (DDS 개념)
-- 그다음에 `src/`에 직접 패키지를 만들어 노드 작성
 
 - [ ] 월드 또는 로봇을 바꿔 실행해 봤다
 - [ ] `ROS_DOMAIN_ID` 변경 실험을 했다
-- [ ] 첫 번째 직접 만든 노드의 주제를 정했다
+
+---
+
+## 7단계: 워크스페이스와 패키지
+
+**핵심 개념:** 내가 만든 코드를 ROS2가 인식하게 하는 방법. (워크스페이스 → 패키지 → 빌드 → 환경 로드)
+
+**답하려는 질문**
+- 워크스페이스, 패키지, 노드의 관계는 무엇인가?
+- 빌드하면 `build/`, `install/`, `log/`에 각각 무엇이 생기는가?
+- `source install/setup.bash`를 하지 않으면 왜 내 패키지가 안 보이는가?
+
+**실습** (이 프로젝트의 `src/`가 워크스페이스의 `src`입니다. 컨테이너에서는 `/root/ros2-study/src`)
+```bash
+cd /root/ros2-study/src
+ros2 pkg create --build-type ament_python my_first_pkg   # 패키지 뼈대 생성
+cd /root/ros2-study
+colcon build --symlink-install
+source install/setup.bash
+ros2 pkg list | grep my_first_pkg
+```
+
+- [ ] 패키지 뼈대를 만들고 파일 구조(`package.xml`, `setup.py` 등)를 읽어 봤다
+- [ ] `colcon build` 후 `install/`에 무엇이 생겼는지 확인했다
+- [ ] `source`를 하기 전과 후에 `ros2 pkg list` 결과를 비교했다
+
+---
+
+## 8단계: 첫 번째 직접 만든 노드
+
+**핵심 개념:** 지금까지 읽기만 하던 토픽을 내 코드로 구독하고 발행해 본다.
+
+**주제 후보**
+- `/scan`을 구독해서 정면 거리를 출력
+- `/cmd_vel`을 발행해서 앞으로 가다가 장애물 앞에서 멈추기
+
+- [ ] 첫 번째 노드의 주제를 정했다
+- [ ] 토픽을 구독하는 노드를 만들어 실행했다
+- [ ] 토픽을 발행하는 노드를 만들어 로봇을 움직였다
 
 ---
 
 ## 나중에 볼 것
 
-지금 단계에서는 필요 없지만 잊지 않으려고 적어 두는 목록입니다. 직접 노드를 짜는 6단계 이후에 필요해질 때 찾아봅니다.
+지금 단계에서는 필요 없지만 잊지 않으려고 적어 두는 목록입니다. 직접 노드를 짜는 8단계 이후에 필요해질 때 찾아봅니다.
 
 | 주제 | 언제 필요한가 | 메모 |
 |---|---|---|
 | `message_filters` | 서로 다른 센서 메시지(카메라 + LiDAR/depth 등)를 시간 기준으로 맞춰 묶어 받을 때 | **회사에서 많이 쓰임.** 우선순위 높음 |
 | `/map` (SLAM) | 로봇이 환경 지도를 만들 때 | |
+| QoS (신뢰성, 내구성 등) | 직접 노드를 만들어 센서 토픽을 구독할 때. 데이터가 안 받아지면 가장 먼저 의심 | 6단계의 `ROS_DOMAIN_ID`(DDS 개념) 다음에 이어서 보면 좋음. `ros2 topic info -v`로 확인 |
+| rosbag2 | 실제 로봇 데이터를 기록해 두고 재생하며 개발·분석할 때 | 센서 데이터를 다루는 업무라면 자주 쓰임 |

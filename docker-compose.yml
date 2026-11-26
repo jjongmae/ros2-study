@@ -1,0 +1,22 @@
+services:
+  ros2:
+    build: .
+    image: ros2-tb3-lab
+    container_name: ros2_lab
+    network_mode: host
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ./:/root/ros2-study
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    stdin_open: true
+    tty: true
+    command: bash
